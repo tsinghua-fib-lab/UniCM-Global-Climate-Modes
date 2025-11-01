@@ -2,7 +2,11 @@
 
 # UniCM
 
-This repository provides the official implementation of **UniCM**, a unified deep model for global climate modes forecasting, as presented in the paper, "**Learning the coupled dynamics of global climate modes**".
+This repository provides the official implementation of **UniCM**, a unified deep model for global climate modes forecasting, as presented in the paper, "**Learning the coupled dynamics of global climate modes**". Contributors to this project are from the [Future Intelligence Lab](https://fi.ee.tsinghua.edu.cn) at [Tsinghua University](https://www.tsinghua.edu.cn/en/).
+
+
+![Loading Model Overview](assets/framework.png "Model Overview")
+---
 
 Global weather extremes, from monsoons to droughts, are shaped by a network of recurrent, coupled ocean-atmosphere patterns known as climate modes (e.g., El Niño-Southern Oscillation (ENSO), Indian Ocean Dipole (IOD)). Forecasting this interconnected global system—rather than treating modes in isolation—remains a fundamental challenge.
 
@@ -26,7 +30,6 @@ UniCM's key innovation is a **coupling-aware approach** that learns the dynamics
 ├── LoadData.py             # Data loading and preprocessing classes
 ├── my_tools.py             # Utility functions (miniEncoder, miniDecoder, attention)
 ├── Embed.py                # Spatio-temporal token embedding classes
-├── func_for_prediction.py  # Helper functions for final prediction and evaluation
 └── ...
 ```
 
@@ -91,8 +94,7 @@ After all 20 models are trained and saved, this command runs the model in `testi
 # evaluation (bagging)
 python app.py --batch_size 50 --cuda_id 2 --machine LM2 \
               --climate_mode all --mode_coef 0.01 --ours_coef 1 --vdt_coef 1 \
-              --lr 5e-5  --dropout 0.2 \
-              --mode testing --training_data CESM2-FV2*gr \
+              --lr 5e-5  --dropout 0.2 --mode testing \
               --patch_size '2-2'  --mode_interaction 1 \
               --input_channal 5 --norm_std 1 --t20d_mode 1 \
               --num_bagging 20  --pretrained_path SaveModel
