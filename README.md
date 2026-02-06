@@ -160,7 +160,3 @@ done
 ```
 
 The results will be saved in `experiments/runs/SaveModel_Seed<SEED>/test_result_all.txt`.
-
-## Acknowledgements
-
-References to the `UniCM` paper and relevant funding/support.
