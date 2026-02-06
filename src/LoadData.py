@@ -801,7 +801,7 @@ def create_training_dataloaders(mypara):
     """
     # Load primary training data (sea surface temperature)
     train_data = make_data(mypara).dataloader_seq(
-        'tos_Omon_{}_historical_r1i1p1f1_{}_185001-201412.nc'.format(
+        'tos_Omon_{}_historical_r1i1p1f1_{}_185001_201412.nc'.format(
             mypara.training_data.split('*')[0],
             mypara.training_data.split('*')[1]
         )
