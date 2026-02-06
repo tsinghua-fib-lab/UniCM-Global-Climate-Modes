@@ -7,13 +7,12 @@ from copy import deepcopy
 from Trainer import TrainLoop
 
 
-def evaluation_test_data(test_data, mypara, writer, mymodel, device):
+def evaluation_test_data(test_data, mypara, mymodel, device):
     # test_data, mypara.val_std = norm_std(test_data, mypara.norm_std)
     test_data = torch.utils.data.TensorDataset(*test_data)
     test_data = torch.utils.data.DataLoader(test_data, num_workers=4, batch_size=mypara.batch_size*4, shuffle=False)
     TrainLoop(
         args = mypara,
-        writer = writer, 
         model=mymodel,
         val_data = test_data,
         device=device,
@@ -35,30 +34,6 @@ def runmean(data, n_run):
         else:
             data_run[i] = np.nanmean(data[i - n_run + 1 : i + 1])
     return data_run
-
-
-def cal_ninoskill2(pre_nino_all, real_nino):
-    """
-    :param pre_nino_all: [n_yr,start_mon,lead_max]
-    :param real_nino: [n_yr,12]
-    :return: nino_skill: [12,lead_max]
-    """
-    lead_max = pre_nino_all.shape[2]
-    nino_skill = np.zeros([12, lead_max])
-    for ll in range(lead_max):
-        lead = ll + 1
-        dd = deepcopy(pre_nino_all[:, :, ll])
-        for mm in range(12):
-            bb = dd[:, mm]
-            st_m = mm + 1
-            terget = st_m + lead
-            if 12 < terget <= 24:
-                terget = terget - 12
-            elif terget > 24:
-                terget = terget - 24
-            aa = deepcopy(real_nino[:, terget - 1])
-            nino_skill[mm, ll] = np.corrcoef(aa, bb)[0, 1]
-    return nino_skill
 
 
 class make_embedding(nn.Module):

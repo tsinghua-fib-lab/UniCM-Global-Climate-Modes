@@ -33,9 +33,8 @@ def SMAPE(pred, target):
 
 
 class TrainLoop:
-    def __init__(self, args, writer, model, train_data=None, val_data=None, train_index=None, val_index=None, device=None):
+    def __init__(self, args, model, train_data=None, val_data=None, train_index=None, val_index=None, device=None):
         self.args = args
-        self.writer = writer
         self.model = model
         self.train_data = train_data
         self.train_index = train_index
@@ -59,16 +58,16 @@ class TrainLoop:
         self.special_index = [4,5] if len(args.val_relative)>2 else [1]
 
     def pearson_corr(self, x, y):
-        # 中心化数据
+        # Center the data
         x = x - torch.mean(x)
         y = y - torch.mean(y)
         
-        # 计算协方差和标准差
+        # Calculate covariance and standard deviation
         cov = torch.sum(x * y) / len(x)
         std_x = torch.sqrt(torch.sum(x ** 2) / len(x))
         std_y = torch.sqrt(torch.sum(y ** 2) / len(y))
         
-        # 计算并返回皮尔逊相关系数
+        # Calculate and return Pearson correlation coefficient
         return cov / (std_x * std_y)
     def calscore(self, y_pred, y_true):
         # compute Nino score
@@ -96,8 +95,8 @@ class TrainLoop:
         if self.step <= 200:
             ratio = initial_ratio
         elif self.step > 200 and self.step <= self.args.lr_anneal_steps-500:
-            total_decay_steps = self.args.lr_anneal_steps - 700  # 实际参与下降的步数
-            decay_step = self.step - 200  # 当前的下降步数
+            total_decay_steps = self.args.lr_anneal_steps - 700  # Actual steps involved in decay
+            decay_step = self.step - 200  # Current decay step
             ratio = initial_ratio - (initial_ratio - final_ratio) * (decay_step / total_decay_steps)
         else:
             ratio = final_ratio
@@ -156,8 +155,8 @@ class TrainLoop:
             refine_data = refine_data.unsqueeze(dim=1)
 
         if save:
-            torch.save(pred, self.args.model_path+'pred_{}.pkl'.format(self.args.current_test_data))# 这个才是需要的
-            torch.save(target, self.args.model_path+'target_{}.pkl'.format(self.args.current_test_data))# 这个才是需要的
+            torch.save(pred, self.args.model_path+'pred_{}.pkl'.format(self.args.current_test_data))
+            torch.save(target, self.args.model_path+'target_{}.pkl'.format(self.args.current_test_data))
 
         if mode=='testing':
 
@@ -179,7 +178,7 @@ class TrainLoop:
         return result
 
 
-    def Evaluation_bagging(self, epoch):
+    def Evaluation_ensemble(self, epoch):
         with torch.no_grad():
 
             fine_pred = []
@@ -191,7 +190,7 @@ class TrainLoop:
             physical_field_pred = []
             physical_field_target = []
 
-            for path in ['experiments/'+self.args.pretrained_path +'_Seed{}_{}/model_save/model_best.pkl'.format(i, self.args.machine) for i in range(1,self.args.num_bagging+1)]:
+            for path in ['experiments/'+self.args.pretrained_path +'_Seed{}/model_save/model_best.pkl'.format(i) for i in range(1,self.args.num_ensemble+1)]:
                 self.model.load_state_dict(torch.load(path, map_location=torch.device('cpu')), strict=True)
                 self.model.to(self.device)
                 print('load model from {}'.format(path))
@@ -212,7 +211,7 @@ class TrainLoop:
                 field_target = []
 
                 for batch in self.val_data:
-                    value, timestamps, std, index_time = batch
+                    value, timestamps, std = batch
 
                     mode_align_value = self.climate_mode_extract(value[:,:,0].to(self.device))
 
@@ -222,12 +221,12 @@ class TrainLoop:
 
                     value = value[:,:,:self.args.input_channal]
 
-                    batch = (value, timestamps, None, None, mode_align_value, index_time)
+                    batch = (value, timestamps, None, None, mode_align_value)
 
                     pred, target, pred_mode, target_mode = self.model_forward(batch, self.model, mode='testing') 
 
-                    field_pred.append(pred.clone())
-                    field_target.append(target.clone())
+                    field_pred.append(pred.clone()[:,:,0])
+                    field_target.append(target.clone()[:,:,0])
 
                     pred = pred[:,:,0]
                     target = target[:,:,0]
@@ -241,17 +240,14 @@ class TrainLoop:
                     mode_all_pred.append(pred_mode)
                     mode_all_target.append(target_mode)
                     timestamps_all.append(timestamps)
-
-                    index_all.append(index_time+self.args.his_len)
-
+                    
+                    
                 eino_pred = torch.cat(eino_pred, dim=0)
                 eino_target = torch.cat(eino_target, dim=0)
 
                 mode_all_pred = torch.cat(mode_all_pred, dim=0)
                 mode_all_target = torch.cat(mode_all_target, dim=0)
                 timestamps_all = torch.cat(timestamps_all, dim=0)
-
-                index_all = torch.cat(index_all, dim=0)
 
                 field_pred = torch.cat(field_pred, dim=0)
                 field_target = torch.cat(field_target, dim=0)
@@ -277,54 +273,30 @@ class TrainLoop:
             physical_field_pred = torch.mean(torch.stack(physical_field_pred, dim=0), dim=0)
             physical_field_target = torch.mean(torch.stack(physical_field_target, dim=0), dim=0)
 
-        print('save file size: ', mode_all_pred.shape, mode_all_target.shape, index_all.shape)
+            print('save file size: ', mode_all_pred.shape, mode_all_target.shape)
 
         torch.save(physical_field_pred, self.args.model_path+'physical_field_pred_{}.pkl'.format(self.args.current_test_data))
         torch.save(physical_field_target, self.args.model_path+'physical_field_target_{}.pkl'.format(self.args.current_test_data))
 
         # # save data
-        torch.save(index_all, self.args.model_path+'index_all_{}.pkl'.format(self.args.current_test_data))
         torch.save(timestamps_all, self.args.model_path+'timestamps_all_{}.pkl'.format(self.args.current_test_data))
 
-        if 'only' in self.args.climate_mode:
-            index = int(self.args.climate_mode.split('_')[1])
+        result = self.climate_mode_sc(eino_pred, eino_target, None,  mode='testing',save=True)
+        
+        sc_all = result['sc_all']
+        sc = result['sc']
+        sc_avg = result['sc_avg']
 
-            eino_pred, eino_target = self.data2mode(index, eino_pred, eino_target, self.args.val_relative[index], None, self.special_index)
-
-            mode_all_pred = mode_all_pred[:,index]
-
-            sc_all = list(self.calscore(eino_pred, eino_target))
-
-            if self.args.metrics_mode == 'weight':
-                sc = np.mean(np.array(sc_all) * self.ninoweight)
-            else:
-                sc = np.mean(sc_all)
-
-            sc_avg = [np.mean(sc_all)]
-            sc_all = [sc_all]
-
-            rmse = torch.sqrt(torch.mean((eino_pred - eino_target) ** 2)).item()
-
-        elif self.args.climate_mode == 'all':
-
-            result = self.climate_mode_sc(eino_pred, eino_target, None,  mode='testing',save=True)
-            
-            sc_all = result['sc_all']
-            sc = result['sc']
-            sc_avg = result['sc_avg']
-
-            rmse = torch.sqrt(torch.mean((eino_pred - eino_target) ** 2)).item()
+        rmse = torch.sqrt(torch.mean((eino_pred - eino_target) ** 2)).item()
             
         self.best_sc = sc 
         self.best_sc_finegrained = sc_all
         self.best_sc_avg = sc_avg
         self.early_stop = 0
         self.best_rmse = rmse
-        torch.save(self.model.state_dict(), self.args.model_path+'model_save/model_best.pkl')
-        torch.save(self.model.state_dict(), self.args.model_path+'model_save/model_best_itr_{}.pkl'.format(epoch))
         print('epoch:{}, SC_best:{}, SC_avg:{}'.format(epoch, self.best_sc, sc_avg))
         print('model saved')
-        with open(self.args.model_path+'result_all.txt', 'a') as f:
+        with open(self.args.model_path+self.args.result_filename, 'a') as f:
             f.write('\n----------evaluation approach------------')
             f.write('\nepoch: {}'.format(epoch))
             f.write('\nSC: {}'.format(self.best_sc))
@@ -349,7 +321,7 @@ class TrainLoop:
             mode_all_target = []
 
             for batch in self.val_data:
-                value, timestamps, std, index_time = batch
+                value, timestamps, std = batch
 
                 mode_align_value = self.climate_mode_extract(value[:,:,0].to(self.device))
 
@@ -359,7 +331,7 @@ class TrainLoop:
 
                 value = value[:,:,:self.args.input_channal]
 
-                batch = (value, timestamps, None, None, mode_align_value, index_time)
+                batch = (value, timestamps, None, None, mode_align_value)
 
                 pred, target, pred_mode, target_mode = self.model_forward(batch, self.model, mode='testing') 
 
@@ -401,9 +373,9 @@ class TrainLoop:
             torch.save(self.model.state_dict(), self.args.model_path+'model_save/model_best.pkl')
             torch.save(self.model.state_dict(), self.args.model_path+'model_save/model_best_itr_{}.pkl'.format(epoch))
             print('epoch:{}, SC_best:{}, SC_avg:{}'.format(epoch, self.best_sc, sc_avg))
-            print([list(i) for i in self.best_sc_finegrained])
+            # print([list(i) for i in self.best_sc_finegrained])
             print('model saved')
-            with open(self.args.model_path+'result_all.txt', 'a') as f:
+            with open(self.args.model_path+self.args.result_filename, 'a') as f:
                 f.write('\n----------evaluation approach------------')
                 f.write('\nepoch: {}'.format(epoch))
                 f.write('\nSC: {}'.format(self.best_sc))
@@ -431,7 +403,7 @@ class TrainLoop:
             print('epoch:{}, sc:{}, sc_best:{}, early_stop:{}\n'.format(epoch, sc, self.best_sc, self.early_stop))
             if self.early_stop >= self.args.early_stop:
                 print('Early stop!')
-                with open(self.args.model_path+'result_all.txt', 'a') as f:
+                with open(self.args.model_path+self.args.result_filename, 'a') as f:
                     f.write('\n\n---------------final result----------------')
                     f.write('\nepoch:{}, SC:{}, SC_avg:{}, RMSE:{}'.format(epoch, self.best_sc, self.best_sc_avg, self.best_rmse))
                     f.write('\nfine-grained sc: {}'.format([list(i) for i in self.best_sc_finegrained]))
@@ -449,21 +421,20 @@ class TrainLoop:
             if self.args.pretrained_path=='':
                 state = self.Evaluation(0)
             else:
-                state = self.Evaluation_bagging(0)
+                state = self.Evaluation_ensemble(0)
             return 0
 
         print('Evaluation First!')
         state = self.Evaluation(0)
 
-        for epoch in range(self.args.total_epochs):
+        for epoch in range(self.args.epochs):
             print('Training')
             
             loss_all, num_all, loss_real_all = 0.0, 0.0,0.0
             start = time.time()
 
             for index, batch in enumerate(self.train_data):
-
-                value, timestamps, std, index_time = batch
+                value, timestamps, std = batch
 
                 self.step = iteration + 1
                 
@@ -475,7 +446,7 @@ class TrainLoop:
 
                 value = value[:,:,:self.args.input_channal]
 
-                batch = (value, timestamps, None, None, mode_align_value, index_time)
+                batch = (value, timestamps, None, None, mode_align_value)
 
                 self.model.train()
                 loss, loss_real, num  = self.run_step(batch, step)
@@ -484,14 +455,11 @@ class TrainLoop:
                 loss_real_all += loss_real * num
                 num_all += num
 
-                if self.args.training_data != 'all' and index == len(self.train_data)-1:
-                    print('\nEvaluation with eval')
-                    state = self.Evaluation(epoch)
+            print('\nEvaluation with eval')
+            state = self.Evaluation(epoch)
 
-                if state == 'stop':
-                    return 0
-
-                iteration += 1
+            if state == 'stop':
+                return 0
 
             end = time.time()
 
@@ -503,9 +471,6 @@ class TrainLoop:
         predictor = batch[0].to(self.device).float()
         timestamps = batch[1].to(self.device).int()
         predictor_align = batch[4].to(self.device).float()
-        # his_align_all = batch[2].to(self.device).float()
-        # his_align_all_time = batch[3].to(self.device).int()
-        index_time = batch[5].to(self.device).int()
 
         assert torch.isfinite(predictor).all(), "Input contains NaN or Inf"
         assert torch.isfinite(predictor_align).all(), "Input contains NaN or Inf"
@@ -518,7 +483,6 @@ class TrainLoop:
                 predictor,
                 predictor_align,
                 timestamps,
-                index_time if mode!='testing' or self.args.test_template!=0 else None,
                 train = model.training,
                 sv_ratio = self.sv_ratio,
             )
@@ -565,13 +529,12 @@ class TrainLoop:
 
         mode_loss = torch.mean((pred_mode - target_mode) ** 2)
 
-        loss = loss * self.args.vdt_coef + loss2 * self.args.mode_coef + mode_loss * self.args.ours_coef
+        loss = loss * self.args.lambda1 + loss2 * self.args.lambda2 + mode_loss * self.args.lambda3
 
         loss.backward()
         num = target.numel()
         loss_real = torch.mean(((pred-target)**2).detach().cpu())
-
-        self.writer.add_scalar('Training/Loss_step', loss, step)
+        
         return loss.item(), loss_real, num
 
     def run_step(self, batch, step):

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import copy
 from my_tools import make_embedding, unfold_func, miniEncoder, miniDecoder, fold_func
 
 class UniCM(nn.Module):
@@ -30,6 +31,7 @@ class UniCM(nn.Module):
         self.decoder = multi_dec_layer(
             dec_layer=dec_layer, num_layers=mypara.num_decoder_layers
         )
+
         self.linear_output = nn.Linear(d_size, self.cube_dim)
 
         self.predictor_emb_mode = make_embedding(
@@ -44,18 +46,9 @@ class UniCM(nn.Module):
 
         self.linear_output_mode = nn.Linear(d_size, 1)
 
-        self.enc_layer_prompt = miniEncoder(
-            d_size, mypara.nheads, mypara.dim_feedforward, mypara.dropout, mode='T'
-        )
-        self.encoder_prompt = multi_enc_layer(
-            enc_layer=self.enc_layer_prompt, num_layers=mypara.num_encoder_layers
-        )
-        self.prompt_linear = nn.Linear(1, d_size)
-        
         enc_layer_mode = miniEncoder(
         d_size, mypara.nheads, mypara.dim_feedforward, mypara.dropout, mode = 'ST' if mypara.mode_interaction !='0' else 'T'
         )
-
         dec_layer_mode = miniDecoder(
             d_size, mypara.nheads, mypara.dim_feedforward, mypara.dropout, mode = 'ST' if mypara.mode_interaction !='0' else 'T'
         )
@@ -63,14 +56,11 @@ class UniCM(nn.Module):
         self.encoder_mode = multi_enc_layer(
             enc_layer=enc_layer_mode, num_layers=mypara.num_encoder_layers
         )
-
         self.decoder_mode = multi_dec_layer(
             dec_layer=dec_layer_mode, num_layers=mypara.num_decoder_layers
-        )
-
+            )
+        
         self.special_index = [4,5] if len(mypara.val_relative)>2 else [1]
-        self.sdtw = SoftDTW(use_cuda=True, gamma=0.1)
-    
 
     def forward_sep(
         self,
@@ -201,7 +191,6 @@ class UniCM(nn.Module):
         predictor, # B * T * C * H * W
         predictor_mode, # B * 7 * T
         timestamps, # B * T
-        index_time, 
         in_mask=None,
         enout_mask=None,
         train=True,
@@ -328,22 +317,20 @@ class UniCM(nn.Module):
         mask = (torch.triu(torch.ones(sz, sz)) == 0).T
         return mask.to(self.mypara.device)
 
-
 class multi_enc_layer(nn.Module):
     def __init__(self, enc_layer, num_layers):
         super().__init__()
-        self.layers = nn.ModuleList([enc_layer for _ in range(num_layers)])
+        self.layers = nn.ModuleList([copy.deepcopy(enc_layer) for _ in range(num_layers)])
 
     def forward(self, x, mask=None):
         for layer in self.layers:
             x = layer(x, mask)
         return x
 
-
 class multi_dec_layer(nn.Module):
     def __init__(self, dec_layer, num_layers):
         super().__init__()
-        self.layers = nn.ModuleList([dec_layer for _ in range(num_layers)])
+        self.layers = nn.ModuleList([copy.deepcopy(dec_layer) for _ in range(num_layers)])
 
     def forward(self, x, en_out, out_mask, enout_mask):
         for layer in self.layers:
