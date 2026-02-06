@@ -10,7 +10,7 @@ import os
 import numpy as np
 from LoadData import *
 from models import UniCM
-from settings import setup_init, setup_testing_environment
+from settings import setup_init, setup_testing_environment, validate_data_paths
 from config import parse_args
 from Trainer import TrainLoop
 
@@ -89,6 +89,9 @@ def evaluate_ensemble_on_dataset(dataset_name, mypara, model, device, load_func,
 
 
 def main(mypara):
+    # Validate data paths before any heavy initialization
+    validate_data_paths(mypara, ['ERA5', 'ORAS5', 'SODA224', 'GODAS'])
+
     # Setup device
     device = torch.device(f"cuda:{mypara.cuda_id}" if torch.cuda.is_available() else "cpu")
     mypara.device = device

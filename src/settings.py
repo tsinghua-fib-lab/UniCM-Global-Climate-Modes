@@ -21,6 +21,46 @@ from my_tools import evaluation_test_data
 from LoadData import make_val_data_ORAS5
 
 
+DATA_HINT = (
+    "Please download the datasets and organize them as follows:\n"
+    "  {data_root}/\n"
+    "  ├── CMIP6/       # Training data (CMIP6 models)\n"
+    "  ├── ERA5/        # ERA5 reanalysis data\n"
+    "  ├── ORAS5/       # ORAS5 reanalysis data\n"
+    "  ├── SODA224/     # SODA reanalysis data\n"
+    "  └── GODAS/       # GODAS reanalysis data\n"
+    "See README.md for details."
+)
+
+
+def validate_data_paths(mypara, required_datasets):
+    """
+    Validate that the data root and required dataset subdirectories exist.
+    Exits with a clear message if any path is missing.
+
+    Args:
+        mypara: Parameter object (must have data_root attribute).
+        required_datasets: List of subdirectory names to check,
+                           e.g. ['CMIP6', 'ORAS5'] for training.
+    """
+    data_root = mypara.data_root
+    if not os.path.isdir(data_root):
+        print(f"\n[ERROR] Data root directory not found: {os.path.abspath(data_root)}")
+        print(DATA_HINT.format(data_root=os.path.abspath(data_root)))
+        exit(1)
+
+    missing = [ds for ds in required_datasets if not os.path.isdir(os.path.join(data_root, ds))]
+    if missing:
+        print(f"\n[ERROR] The following dataset directories are missing under {os.path.abspath(data_root)}:")
+        for ds in missing:
+            print(f"  - {ds}/")
+        print()
+        print(DATA_HINT.format(data_root=os.path.abspath(data_root)))
+        exit(1)
+
+    print(f"[OK] All required datasets found under {os.path.abspath(data_root)}: {', '.join(required_datasets)}")
+
+
 def setup_init(seed):
     """
     Initialize random seeds and configure PyTorch for reproducibility.
