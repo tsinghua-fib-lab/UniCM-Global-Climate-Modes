@@ -20,4 +20,4 @@ dependencies:
       - netcdf4
       - scikit-learn
       - numba
-      - pynvml
+      - nvidia-ml-py
