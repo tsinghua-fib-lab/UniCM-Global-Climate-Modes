@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+.vscode/
+*output_dir/
+*logs/
+*logs*
+*slurm-*
+
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Project specific
+logs/
+experiments/
+dataset/
+data/
+datasets/
+*model_save/
+*model_save/
+*ModelSave*
+*experiments*
+*experiments/
+
+# Model checkpoints and outputs
+*.pkl
+*.pth
+*.pt
+*.h5
+*.ckpt
+
+# TensorBoard
+events.out.tfevents.*
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+*.cache
+
+*src_local/
+
+# OS
+Thumbs.db
+.directory
