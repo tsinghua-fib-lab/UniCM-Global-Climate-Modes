@@ -42,7 +42,7 @@ UniCM's key innovation is a **coupling-aware approach** that learns the dynamics
 
 ### Environment Setup
 
-This project uses **Conda** for environment management. You can create the environment directly from the provided `environment.yml` file.
+We strongly recommend using a virtual environment (such as **Conda**) to manage dependencies and avoid conflicts. You can create the environment directly from the provided `environment.yml` file.
 
 1.  **Create the environment:**
     ```bash
