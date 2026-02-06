@@ -40,6 +40,24 @@ UniCM's key innovation is a **coupling-aware approach** that learns the dynamics
 
 ## Installation
 
+### Prerequisites: Install Conda
+
+If you don't have Conda installed, we recommend installing **Miniconda** (a minimal installer for Conda).
+
+**Linux/macOS:**
+```bash
+# Download Miniconda installer
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+
+# Run the installer
+bash Miniconda3-latest-Linux-x86_64.sh
+
+# Follow the prompts and then restart your terminal
+source ~/.bashrc
+```
+
+For other operating systems or full Anaconda, visit the [official installation guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
+
 ### Environment Setup
 
 We strongly recommend using a virtual environment (such as **Conda**) to manage dependencies and avoid conflicts. You can create the environment directly from the provided `environment.yml` file.
