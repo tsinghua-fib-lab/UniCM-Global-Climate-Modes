@@ -12,7 +12,7 @@ from LoadData import *
 from Trainer import TrainLoop
 from models import UniCM
 import copy
-from settings import setup_init, setup_training_environment
+from settings import setup_init, setup_training_environment, validate_data_paths
 from config import parse_args
 
 from numba import cuda
@@ -24,6 +24,9 @@ def main(mypara):
     """
     Main training function.
     """
+    # Validate data paths before any heavy initialization
+    validate_data_paths(mypara, ['CMIP6', 'ORAS5'])
+
     # Setup training environment
     device = setup_training_environment(mypara)
 

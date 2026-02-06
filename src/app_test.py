@@ -7,7 +7,7 @@ Model evaluation script for testing trained models on multiple datasets.
 import torch
 from LoadData import *
 from models import UniCM
-from settings import setup_init, setup_testing_environment, load_pretrained_model, evaluate_on_dataset
+from settings import setup_init, setup_testing_environment, load_pretrained_model, evaluate_on_dataset, validate_data_paths
 from config import parse_args
 
 torch.autograd.set_detect_anomaly(True)
@@ -23,10 +23,13 @@ def main(mypara):
     - SODA
     - GODAS
     """
+    # Validate data paths before any heavy initialization
+    validate_data_paths(mypara, ['ERA5', 'ORAS5', 'SODA224', 'GODAS'])
+
     # Setup device
     device = torch.device(f"cuda:{mypara.cuda_id}" if torch.cuda.is_available() else "cpu")
     mypara.device = device
-    
+
     # Setup paths
     file_path = f'{mypara.exp_folder}/SaveModel_Seed{mypara.seed}/'
     mypara.model_path = f'./experiments/{file_path}'
