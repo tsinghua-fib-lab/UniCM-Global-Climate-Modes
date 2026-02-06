@@ -60,7 +60,7 @@ For other operating systems or full Anaconda, visit the [official installation g
 
 ### Environment Setup
 
-We strongly recommend using a virtual environment (such as **Conda**) to manage dependencies and avoid conflicts. You can create the environment directly from the provided `environment.yml` file.
+We strongly recommend using a virtual environment to manage dependencies and avoid conflicts. You can create the environment directly from the provided `environment.yml` file.
 
 1.  **Create the environment:**
     ```bash
